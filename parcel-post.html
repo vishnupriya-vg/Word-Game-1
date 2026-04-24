@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Parcel Post — Word Sort</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{
+      font-family:'Segoe UI',Tahoma,sans-serif;
+      background:linear-gradient(160deg,#fef9f0,#faeedd);
+      min-height:100vh;display:flex;align-items:center;
+      justify-content:center;overflow:hidden;
+    }
+
+    /* ── Screens ─────────────────────────────────── */
+    .screen{display:none;flex-direction:column;align-items:center;
+      width:100%;max-width:440px;min-height:100vh;padding:0;justify-content:flex-start;}
+    .screen.active{display:flex;}
+
+    /* ══════════════════════════════════════════════
+       GRADE SELECT
+    ══════════════════════════════════════════════ */
+    #s-grade{padding:36px 24px 32px;justify-content:center;}
+    .grade-logo{font-size:4rem;margin-bottom:6px;filter:drop-shadow(0 4px 12px rgba(200,80,30,.3));}
+    .grade-title{font-size:2.2rem;font-weight:900;color:#c84a18;letter-spacing:2px;
+      text-shadow:0 2px 8px rgba(200,74,24,.2);}
+    .grade-tagline{font-size:.95rem;color:#d4881a;font-weight:600;margin-bottom:4px;}
+    .grade-sub{font-size:.8rem;color:#a07848;margin-bottom:32px;text-align:center;line-height:1.55;}
+    .grade-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;width:100%;}
+    .grade-btn{
+      background:#fffbf2;
+      border:2.5px solid #d4a050;
+      border-radius:6px;
+      padding:16px 4px;cursor:pointer;text-align:center;
+      font-size:1.35rem;font-weight:900;color:#3a2010;
+      transition:all .18s;user-select:none;
+      box-shadow:0 2px 8px rgba(0,0,0,.1),inset 0 1px 0 rgba(255,255,255,.8);
+      /* stamp perforations */
+      outline:3px dotted #d4a050;outline-offset:3px;
+    }
+    .grade-btn span{display:block;font-size:.58rem;font-weight:500;color:#a07848;margin-top:2px;letter-spacing:.5px;}
+    .grade-btn:hover{background:#c84a18;border-color:#c84a18;outline-color:#c84a18;color:#fff;transform:translateY(-2px);box-shadow:0 6px 18px rgba(200,74,24,.35);}
+    .grade-btn:hover span{color:rgba(255,255,255,.8);}
+
+    /* ══════════════════════════════════════════════
+       GAME SCREEN
+    ══════════════════════════════════════════════ */
+    #s-game{padding:0;}
+
+    /* Header */
+    .g-header{
+      width:100%;display:flex;justify-content:space-between;align-items:center;
+      padding:14px 18px 12px;
+      background:linear-gradient(135deg,#c84a18,#e06020);
+      box-shadow:0 2px 12px rgba(200,74,24,.3);
+    }
+    .g-badge{background:rgba(255,255,255,.2);color:#fff;font-weight:800;
+      font-size:.78rem;padding:4px 12px;border-radius:20px;border:1px solid rgba(255,255,255,.35);}
+    .g-right{display:flex;align-items:center;gap:10px;}
+    .g-score{color:#fff;font-size:.95rem;font-weight:800;}
+    .g-round{font-size:.72rem;color:rgba(255,255,255,.75);font-weight:600;}
+
+    /* Timer */
+    .timer-row{width:100%;display:flex;align-items:center;gap:10px;padding:10px 18px 0;}
+    .timer-label{font-size:.62rem;color:#a07848;font-weight:700;letter-spacing:.5px;flex-shrink:0;}
+    .timer-bar{flex:1;height:9px;background:#e8d8c0;border-radius:5px;overflow:hidden;border:1px solid #d4b880;}
+    .timer-fill{height:100%;border-radius:5px;background:linear-gradient(90deg,#4caf50,#ff9800 60%,#e53935);
+      transition:width .9s linear,background .5s;}
+    .timer-num{font-size:.72rem;font-weight:800;color:#3a2010;min-width:28px;text-align:right;flex-shrink:0;}
+
+    /* Target board */
+    .target-board{
+      width:calc(100% - 32px);margin:12px 16px 0;
+      background:#fff;border:2.5px solid #d4a050;border-radius:12px;
+      padding:10px 18px 12px;text-align:center;
+      box-shadow:0 3px 14px rgba(0,0,0,.08),inset 0 1px 0 rgba(255,255,255,.9);
+      position:relative;
+    }
+    .target-board::before,.target-board::after{
+      content:'✦';position:absolute;color:#d4a050;font-size:.55rem;top:10px;
+    }
+    .target-board::before{left:12px;} .target-board::after{right:12px;}
+    .target-lbl{font-size:.58rem;color:#a07848;letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;}
+    .target-word-big{font-size:2rem;font-weight:900;color:#c84a18;letter-spacing:4px;}
+    .target-sub{font-size:.6rem;color:#c0905a;margin-top:2px;}
+
+    /* Queue */
+    .queue-row{display:flex;justify-content:space-between;align-items:center;
+      padding:8px 18px 0;width:100%;}
+    .queue-dots{display:flex;gap:5px;}
+    .qdot{width:8px;height:8px;border-radius:50%;background:#e8d0b0;transition:background .3s;}
+    .qdot.done{background:#4caf50;}
+    .qdot.active{background:#c84a18;}
+    .qdot.fail{background:#e53935;}
+    .queue-hint{font-size:.6rem;color:#c0905a;}
+
+    /* Belt */
+    .belt-wrap{width:100%;margin-top:8px;background:#f5e8d0;}
+    .belt-rail{
+      height:9px;
+      background:repeating-linear-gradient(90deg,#7a5530 0,#7a5530 22px,#5a3a18 22px,#5a3a18 44px);
+      animation:beltRoll .5s linear infinite;
+    }
+    @keyframes beltRoll{from{background-position:0 0;}to{background-position:44px 0;}}
+    .belt-surface{
+      height:86px;background:linear-gradient(180deg,#8B6340,#7a5530);
+      display:flex;align-items:center;justify-content:center;
+      position:relative;overflow:hidden;
+    }
+    /* Belt grain lines */
+    .belt-surface::before{
+      content:'';position:absolute;inset:0;
+      background:repeating-linear-gradient(90deg,transparent 0,transparent 60px,rgba(255,255,255,.04) 60px,rgba(255,255,255,.04) 61px);
+    }
+
+    /* Parcel */
+    .parcel{
+      background:linear-gradient(145deg,#d4a060,#b87830);
+      border:3px solid #8B5e20;border-radius:8px;
+      padding:10px 16px;min-width:120px;text-align:center;
+      position:relative;
+      box-shadow:0 4px 16px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.2);
+    }
+    /* Twine */
+    .parcel::before{content:'';position:absolute;left:0;right:0;top:50%;height:2px;
+      background:rgba(100,55,10,.5);}
+    .parcel::after{content:'';position:absolute;top:0;bottom:0;left:50%;width:2px;
+      background:rgba(100,55,10,.5);}
+    .parcel-label{
+      background:#fffbf0;border:1px solid #d4a050;border-radius:4px;
+      padding:5px 12px;position:relative;z-index:1;
+    }
+    .parcel-word{font-size:.88rem;font-weight:900;color:#3a2010;letter-spacing:.8px;}
+
+    /* Parcel animation states */
+    @keyframes enterRight{from{transform:translateX(220px);opacity:0;}to{transform:translateX(0);opacity:1;}}
+    @keyframes exitLeft{from{transform:translateX(0);opacity:1;}to{transform:translateX(-220px);opacity:0;}}
+    @keyframes correctPop{0%{transform:scale(1);}40%{transform:scale(1.15);}70%{transform:scale(.95);}100%{transform:scale(1);opacity:0;}}
+    @keyframes wrongJolt{0%,100%{transform:translateX(0);}20%{transform:translateX(-12px);}60%{transform:translateX(10px);}80%{transform:translateX(-6px);}}
+
+    .parcel.entering{animation:enterRight .35s ease-out forwards;}
+    .parcel.exit-correct{animation:correctPop .45s ease-out forwards;}
+    .parcel.exit-wrong{animation:wrongJolt .3s ease-out,exitLeft .35s ease-in .25s forwards;}
+    .parcel.hidden{opacity:0;pointer-events:none;}
+
+    /* Wrong flash */
+    .parcel.exit-wrong .parcel-label{background:#fdeaea;border-color:#e53935;}
+
+    /* ── Baskets ─────────────────────────────────── */
+    .baskets-row{
+      display:flex;gap:8px;width:calc(100% - 28px);
+      margin:10px 14px 0;flex:1;
+    }
+    .basket{
+      flex:1;border-radius:12px;padding:10px 6px 10px;
+      display:flex;flex-direction:column;align-items:center;
+      cursor:pointer;transition:transform .12s,box-shadow .12s;
+      user-select:none;border:2.5px solid transparent;
+      box-shadow:0 2px 10px rgba(0,0,0,.08);
+    }
+    .basket:hover:not(.sealed):not(.locked){transform:translateY(-3px);box-shadow:0 6px 18px rgba(0,0,0,.15);}
+    .basket.syn{background:#f0faf0;border-color:#66bb6a;}
+    .basket.ant{background:#fff5f5;border-color:#ef9a9a;}
+    .basket.nei{background:#faf7f2;border-color:#bcaaa4;}
+
+    .basket.sealed{cursor:default;}
+    .basket.sealed.syn{background:#e8f5e9;border-color:#2e7d32;box-shadow:0 0 16px rgba(46,125,50,.25);}
+    .basket.sealed.ant{background:#ffebee;border-color:#c62828;box-shadow:0 0 16px rgba(198,40,40,.2);}
+    .basket.sealed.nei{background:#efebe9;border-color:#795548;box-shadow:0 0 16px rgba(121,85,72,.2);}
+
+    @keyframes sealPulse{0%{transform:scale(1);}40%{transform:scale(1.06);}80%{transform:scale(.98);}100%{transform:scale(1);}}
+    .basket.seal-anim{animation:sealPulse .5s ease-out;}
+
+    .basket-header{
+      display:flex;align-items:center;gap:5px;margin-bottom:6px;width:100%;justify-content:center;
+    }
+    .basket-icon{font-size:.95rem;}
+    .basket-lbl{font-size:.58rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;}
+    .basket.syn .basket-lbl{color:#2e7d32;}
+    .basket.ant .basket-lbl{color:#c62828;}
+    .basket.nei .basket-lbl{color:#795548;}
+    .basket.sealed .basket-lbl::after{content:' ✓';}
+
+    .basket-divider{width:100%;height:1px;margin:4px 0;}
+    .basket.syn .basket-divider{background:#a5d6a7;}
+    .basket.ant .basket-divider{background:#ef9a9a;}
+    .basket.nei .basket-divider{background:#bcaaa4;}
+
+    .basket-slots{width:100%;display:flex;flex-direction:column;gap:5px;flex:1;}
+    .basket-word{
+      width:100%;min-height:30px;border-radius:6px;
+      display:flex;align-items:center;justify-content:center;
+      font-size:.65rem;font-weight:800;letter-spacing:.5px;text-transform:uppercase;
+      transition:all .3s;border:1.5px dashed transparent;padding:3px;text-align:center;
+    }
+    .basket-word.empty{
+      border-color:#ddd;background:rgba(255,255,255,.5);color:#ccc;
+    }
+    .basket-word.empty::after{content:'—';font-weight:400;font-size:.6rem;}
+    .basket-word.filled{border-style:solid;}
+    .basket.syn .basket-word.filled{background:#c8e6c9;border-color:#81c784;color:#1b5e20;}
+    .basket.ant .basket-word.filled{background:#ffcdd2;border-color:#e57373;color:#b71c1c;}
+    .basket.nei .basket-word.filled{background:#d7ccc8;border-color:#a1887f;color:#4e342e;}
+
+    @keyframes wordDrop{from{transform:translateY(-10px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+    .basket-word.filled{animation:wordDrop .25s ease-out;}
+
+    .basket-count{font-size:.55rem;color:#aaa;margin-top:4px;}
+    .basket.syn .basket-count{color:#81c784;}
+    .basket.ant .basket-count{color:#e57373;}
+    .basket.nei .basket-count{color:#a1887f;}
+
+    /* Feedback toast */
+    .feedback-toast{
+      position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+      padding:10px 24px;border-radius:24px;font-size:.82rem;font-weight:700;
+      pointer-events:none;z-index:100;opacity:0;transition:opacity .2s;
+      box-shadow:0 4px 20px rgba(0,0,0,.2);
+    }
+    .feedback-toast.show{opacity:1;}
+    .feedback-toast.ok{background:#2e7d32;color:#fff;}
+    .feedback-toast.ng{background:#c62828;color:#fff;}
+
+    /* Round overlay */
+    #round-overlay{
+      position:fixed;inset:0;background:rgba(254,249,240,.92);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      z-index:200;opacity:0;pointer-events:none;transition:opacity .3s;
+    }
+    #round-overlay.visible{opacity:1;pointer-events:all;}
+    .ro-icon{font-size:3.5rem;margin-bottom:8px;animation:popIn .4s ease-out;}
+    .ro-title{font-size:1.5rem;font-weight:900;color:#c84a18;margin-bottom:4px;}
+    .ro-score{font-size:3rem;font-weight:900;color:#2e7d32;}
+    .ro-score span{font-size:1.2rem;color:#a07848;}
+    .ro-sub{font-size:.8rem;color:#a07848;margin-top:4px;}
+    .ro-next{font-size:.75rem;color:#c0905a;margin-top:16px;}
+    @keyframes popIn{from{transform:scale(.7);opacity:0;}to{transform:scale(1);opacity:1;}}
+
+    /* Footer */
+    .g-footer{padding:8px 18px 12px;width:100%;text-align:center;font-size:.65rem;color:#c0905a;}
+
+    /* ══════════════════════════════════════════════
+       SCORECARD
+    ══════════════════════════════════════════════ */
+    #s-score{padding:32px 22px 28px;justify-content:center;}
+    .sc-logo{font-size:2.8rem;margin-bottom:6px;}
+    .sc-title{font-size:1.8rem;font-weight:900;color:#c84a18;margin-bottom:2px;}
+    .sc-grade{font-size:.8rem;color:#a07848;margin-bottom:8px;}
+    .sc-total{font-size:3.8rem;font-weight:900;color:#2e7d32;line-height:1;}
+    .sc-total span{font-size:1.5rem;color:#a07848;}
+    .sc-sub{font-size:.78rem;color:#a07848;margin-bottom:22px;}
+
+    .sc-rounds{width:100%;display:flex;flex-direction:column;gap:10px;margin-bottom:24px;}
+    .sc-round{
+      background:#fff;border:2px solid #e8d0a0;border-radius:12px;
+      padding:12px 16px;
+    }
+    .sc-round-title{font-size:.65rem;color:#c0905a;font-weight:700;text-transform:uppercase;
+      letter-spacing:1px;margin-bottom:8px;}
+    .sc-round-target{font-size:1.1rem;font-weight:900;color:#c84a18;margin-bottom:8px;}
+    .sc-words{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px;}
+    .sc-chip{
+      font-size:.6rem;font-weight:700;padding:3px 8px;border-radius:10px;
+      text-transform:uppercase;letter-spacing:.4px;
+    }
+    .sc-chip.syn{background:#c8e6c9;color:#1b5e20;}
+    .sc-chip.ant{background:#ffcdd2;color:#b71c1c;}
+    .sc-chip.nei{background:#d7ccc8;color:#4e342e;}
+    .sc-chip.miss{background:#fff3e0;color:#e65100;border:1px solid #ffcc80;}
+    .sc-round-score{font-size:.78rem;font-weight:800;color:#2e7d32;text-align:right;}
+
+    .btn-row{display:flex;gap:12px;justify-content:center;width:100%;}
+    .btn{padding:12px 24px;border-radius:28px;border:none;font-size:.88rem;font-weight:800;
+      cursor:pointer;transition:opacity .2s,transform .1s;user-select:none;font-family:inherit;}
+    .btn:hover{opacity:.88;transform:translateY(-1px);}
+    .btn-primary{background:#c84a18;color:#fff;}
+    .btn-outline{background:transparent;color:#a07848;border:2px solid #d4a050;}
+  </style>
+</head>
+<body>
+
+<!-- round transition overlay -->
+<div id="round-overlay">
+  <div class="ro-icon">📮</div>
+  <div class="ro-title" id="ro-title">Round 1 Complete!</div>
+  <div class="ro-score" id="ro-score">0<span>/60</span></div>
+  <div class="ro-sub" id="ro-sub">Keep going!</div>
+  <div class="ro-next">Next round starting…</div>
+</div>
+
+<!-- feedback toast -->
+<div class="feedback-toast" id="toast"></div>
+
+<!-- ══ Grade Select ══════════════════════════════ -->
+<div class="screen active" id="s-grade">
+  <div class="grade-logo">📮</div>
+  <div class="grade-title">PARCEL POST</div>
+  <div class="grade-tagline">Word Sorting Game</div>
+  <div class="grade-sub">Sort each word into the right basket —<br>Synonym, Antonym, or Neither!</div>
+  <div class="grade-grid" id="grade-grid"></div>
+</div>
+
+<!-- ══ Game ═════════════════════════════════════ -->
+<div class="screen" id="s-game">
+
+  <div class="g-header">
+    <div class="g-badge" id="g-badge">Grade 5</div>
+    <div class="g-right">
+      <div>
+        <div class="g-score" id="g-score">0 pts</div>
+        <div class="g-round" id="g-round">Round 1 of 3</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="timer-row">
+    <div class="timer-label">⏱</div>
+    <div class="timer-bar"><div class="timer-fill" id="timer-fill" style="width:100%"></div></div>
+    <div class="timer-num" id="timer-num">90s</div>
+  </div>
+
+  <div class="target-board">
+    <div class="target-lbl">Sort words related to...</div>
+    <div class="target-word-big" id="target-word">HAPPY</div>
+    <div class="target-sub">Tap a basket for each arriving parcel</div>
+  </div>
+
+  <div class="queue-row">
+    <div class="queue-dots" id="queue-dots"></div>
+    <div class="queue-hint" id="queue-hint">6 parcels on the way</div>
+  </div>
+
+  <div class="belt-wrap">
+    <div class="belt-rail"></div>
+    <div class="belt-surface">
+      <div class="parcel hidden" id="parcel">
+        <div class="parcel-label"><div class="parcel-word" id="parcel-word">WORD</div></div>
+      </div>
+    </div>
+    <div class="belt-rail"></div>
+  </div>
+
+  <div class="baskets-row">
+    <div class="basket syn" id="b-syn" onclick="tapBasket('syn')">
+      <div class="basket-header">
+        <span class="basket-icon">🟢</span>
+        <span class="basket-lbl">Synonym</span>
+      </div>
+      <div class="basket-divider"></div>
+      <div class="basket-slots">
+        <div class="basket-word empty" id="bw-syn-0"></div>
+        <div class="basket-word empty" id="bw-syn-1"></div>
+      </div>
+      <div class="basket-count" id="bc-syn">○ ○</div>
+    </div>
+
+    <div class="basket ant" id="b-ant" onclick="tapBasket('ant')">
+      <div class="basket-header">
+        <span class="basket-icon">🔴</span>
+        <span class="basket-lbl">Antonym</span>
+      </div>
+      <div class="basket-divider"></div>
+      <div class="basket-slots">
+        <div class="basket-word empty" id="bw-ant-0"></div>
+        <div class="basket-word empty" id="bw-ant-1"></div>
+      </div>
+      <div class="basket-count" id="bc-ant">○ ○</div>
+    </div>
+
+    <div class="basket nei" id="b-nei" onclick="tapBasket('nei')">
+      <div class="basket-header">
+        <span class="basket-icon">⚪</span>
+        <span class="basket-lbl">Neither</span>
+      </div>
+      <div class="basket-divider"></div>
+      <div class="basket-slots">
+        <div class="basket-word empty" id="bw-nei-0"></div>
+        <div class="basket-word empty" id="bw-nei-1"></div>
+      </div>
+      <div class="basket-count" id="bc-nei">○ ○</div>
+    </div>
+  </div>
+
+  <div class="g-footer" id="g-footer">Sort all 6 parcels correctly to seal the baskets!</div>
+
+</div>
+
+<!-- ══ Scorecard ═════════════════════════════════ -->
+<div class="screen" id="s-score">
+  <div class="sc-logo">🏆</div>
+  <div class="sc-title">SORTING DONE!</div>
+  <div class="sc-grade" id="sc-grade">Grade 5</div>
+  <div class="sc-total" id="sc-total">0<span>/180</span></div>
+  <div class="sc-sub" id="sc-sub">0 first-attempt correct out of 18</div>
+  <div class="sc-rounds" id="sc-rounds"></div>
+  <div class="btn-row">
+    <button class="btn btn-outline" onclick="goGrade()">Change Grade</button>
+    <button class="btn btn-primary" onclick="playAgain()">Play Again 🔄</button>
+  </div>
+</div>
+
+<script src="parcel-questions.js"></script>
+<script>
+// ─── State ──────────────────────────────────────────────────────────────────
+const ROUND_TIME = 90;
+
+let st = {
+  grade: 5,
+  rounds: [],
+  roundIdx: 0,
+  queue: [],
+  sorted: {syn:[],ant:[],nei:[]},
+  sealed: {syn:false,ant:false,nei:false},
+  failed: new Set(),
+  roundScore: 0,
+  totalScore: 0,
+  history: [],
+  timeLeft: ROUND_TIME,
+  timerInterval: null,
+  animating: false,
+};
+
+// ─── Audio ──────────────────────────────────────────────────────────────────
+let audioCtx = null;
+function getAudio(){
+  if(!audioCtx) audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  if(audioCtx.state==='suspended') audioCtx.resume();
+  return audioCtx;
+}
+function playCorrectSort(){
+  try{
+    const ctx=getAudio(),t=ctx.currentTime;
+    const osc=ctx.createOscillator(),g=ctx.createGain();
+    osc.connect(g);g.connect(ctx.destination);
+    osc.type='sine';osc.frequency.value=880;
+    g.gain.setValueAtTime(0.001,t);g.gain.linearRampToValueAtTime(.18,t+.01);
+    g.gain.exponentialRampToValueAtTime(0.001,t+.22);
+    osc.start(t);osc.stop(t+.22);
+  }catch(e){}
+}
+function playSeal(){
+  try{
+    const ctx=getAudio(),t=ctx.currentTime;
+    [523,659,784,1047].forEach((f,i)=>{
+      const osc=ctx.createOscillator(),g=ctx.createGain();
+      osc.connect(g);g.connect(ctx.destination);
+      osc.type='sine';osc.frequency.value=f;
+      const st2=t+i*.09;
+      g.gain.setValueAtTime(0.001,st2);g.gain.linearRampToValueAtTime(.2,st2+.015);
+      g.gain.exponentialRampToValueAtTime(0.001,st2+.32);
+      osc.start(st2);osc.stop(st2+.32);
+    });
+  }catch(e){}
+}
+function playUhOh(){
+  try{
+    const ctx=getAudio(),t=ctx.currentTime;
+    [400,280].forEach((f,i)=>{
+      const osc=ctx.createOscillator(),g=ctx.createGain();
+      osc.connect(g);g.connect(ctx.destination);
+      osc.type='sine';osc.frequency.value=f;
+      const st2=t+i*.18;
+      g.gain.setValueAtTime(0.001,st2);g.gain.linearRampToValueAtTime(.22,st2+.02);
+      g.gain.exponentialRampToValueAtTime(0.001,st2+.25);
+      osc.start(st2);osc.stop(st2+.28);
+    });
+  }catch(e){}
+}
+
+// ─── Grade Grid ─────────────────────────────────────────────────────────────
+(function initGradeGrid(){
+  const grid=document.getElementById('grade-grid');
+  for(let g=3;g<=10;g++){
+    const btn=document.createElement('div');
+    btn.className='grade-btn';
+    btn.innerHTML=`${g}<span>Grade</span>`;
+    btn.onclick=()=>startGame(g);
+    grid.appendChild(btn);
+  }
+})();
+
+// ─── Start Game ─────────────────────────────────────────────────────────────
+function startGame(grade){
+  st.grade=grade;
+  st.rounds=shuffle([...PARCEL_Q[grade]]).slice(0,3);
+  st.roundIdx=0;
+  st.totalScore=0;
+  st.history=[];
+  document.getElementById('g-badge').textContent=`Grade ${grade}`;
+  showScreen('s-game');
+  loadRound();
+}
+
+// ─── Load Round ─────────────────────────────────────────────────────────────
+function loadRound(){
+  const q=st.rounds[st.roundIdx];
+  const words=[
+    ...q.syn.map(w=>({word:w,type:'syn'})),
+    ...q.ant.map(w=>({word:w,type:'ant'})),
+    ...q.nei.map(w=>({word:w,type:'nei'})),
+  ];
+  st.queue=shuffle(words);
+  st.sorted={syn:[],ant:[],nei:[]};
+  st.sealed={syn:false,ant:false,nei:false};
+  st.failed=new Set();
+  st.roundScore=0;
+  st.animating=false;
+
+  document.getElementById('g-round').textContent=`Round ${st.roundIdx+1} of 3`;
+  document.getElementById('g-score').textContent=`${st.totalScore} pts`;
+  document.getElementById('target-word').textContent=q.target;
+
+  ['syn','ant','nei'].forEach(resetBasket);
+  buildQueueDots();
+  startTimer();
+  setTimeout(showNextParcel,200);
+}
+
+// ─── Queue dots ──────────────────────────────────────────────────────────────
+function buildQueueDots(){
+  const c=document.getElementById('queue-dots');
+  c.innerHTML='';
+  for(let i=0;i<6;i++){
+    const d=document.createElement('div');
+    d.className='qdot';d.id='qd'+i;
+    c.appendChild(d);
+  }
+  updateQueueHint();
+}
+
+function updateQueueDots(){
+  const total=6;
+  const sorted=st.sorted.syn.length+st.sorted.ant.length+st.sorted.nei.length;
+  for(let i=0;i<total;i++){
+    const d=document.getElementById('qd'+i);
+    if(!d) continue;
+    if(i<sorted) d.className='qdot done';
+    else if(i===sorted) d.className='qdot active';
+    else d.className='qdot';
+  }
+  updateQueueHint();
+}
+
+function updateQueueHint(){
+  const sorted=st.sorted.syn.length+st.sorted.ant.length+st.sorted.nei.length;
+  const remaining=st.queue.length;
+  document.getElementById('queue-hint').textContent=
+    sorted===0?`${remaining} parcels arriving`
+    :sorted===6?'All sorted!'
+    :`${sorted} sorted · ${remaining} on the belt`;
+}
+
+// ─── Parcel ──────────────────────────────────────────────────────────────────
+function showNextParcel(){
+  if(st.queue.length===0) return;
+  const current=st.queue[0];
+  const p=document.getElementById('parcel');
+  const pw=document.getElementById('parcel-word');
+  pw.textContent=current.word;
+  p.className='parcel entering';
+  setTimeout(()=>{ if(p.classList.contains('entering')) p.className='parcel'; },380);
+  st.animating=false;
+  updateQueueDots();
+}
+
+// ─── Tap Basket ──────────────────────────────────────────────────────────────
+function tapBasket(type){
+  if(st.animating||st.queue.length===0) return;
+  if(st.sealed[type]){ showToast('Already sealed! ✓','ok'); return; }
+  st.animating=true;
+  lockBaskets(true);
+
+  const current=st.queue[0];
+  const correct=current.type===type;
+
+  if(correct){
+    const p=document.getElementById('parcel');
+    p.className='parcel exit-correct';
+    playCorrectSort();
+    setTimeout(()=>{
+      p.className='parcel hidden';
+      st.queue.shift();
+      st.sorted[type].push(current.word);
+      updateBasketDisplay(type);
+      if(!st.failed.has(current.word)){
+        st.roundScore+=10;
+        document.getElementById('g-score').textContent=`${st.totalScore+st.roundScore} pts`;
+      }
+      updateQueueDots();
+
+      if(st.sorted[type].length===2){
+        st.sealed[type]=true;
+        sealBasket(type);
+        const allSealed=st.sealed.syn&&st.sealed.ant&&st.sealed.nei;
+        if(allSealed){ clearInterval(st.timerInterval); setTimeout(endRound,900); return; }
+      }
+      lockBaskets(false);
+      setTimeout(showNextParcel,250);
+    },420);
+
+  } else {
+    const p=document.getElementById('parcel');
+    p.className='parcel exit-wrong';
+    playUhOh();
+    showToast('Uh oh! Try another basket 📦','ng');
+    st.failed.add(current.word);
+    setTimeout(()=>{
+      p.className='parcel hidden';
+      const item=st.queue.shift();
+      st.queue.push(item);
+      updateQueueDots();
+      lockBaskets(false);
+      setTimeout(showNextParcel,180);
+    },560);
+  }
+}
+
+// ─── Basket helpers ──────────────────────────────────────────────────────────
+function resetBasket(type){
+  document.getElementById('b-'+type).classList.remove('sealed','seal-anim');
+  [0,1].forEach(i=>{
+    const el=document.getElementById('bw-'+type+'-'+i);
+    el.textContent='';el.className='basket-word empty';
+  });
+  document.getElementById('bc-'+type).textContent='○ ○';
+}
+
+function updateBasketDisplay(type){
+  st.sorted[type].forEach((word,i)=>{
+    const el=document.getElementById('bw-'+type+'-'+i);
+    el.textContent=word;el.className='basket-word filled';
+  });
+  const n=st.sorted[type].length;
+  document.getElementById('bc-'+type).textContent=(n>=1?'●':'○')+' '+(n>=2?'●':'○');
+}
+
+function sealBasket(type){
+  const b=document.getElementById('b-'+type);
+  b.classList.add('sealed','seal-anim');
+  setTimeout(()=>b.classList.remove('seal-anim'),550);
+  playSeal();
+  document.getElementById('bc-'+type).textContent='✓ ✓';
+}
+
+function lockBaskets(lock){
+  ['syn','ant','nei'].forEach(t=>{
+    const b=document.getElementById('b-'+t);
+    if(lock) b.classList.add('locked'); else b.classList.remove('locked');
+  });
+}
+
+// ─── Timer ──────────────────────────────────────────────────────────────────
+function startTimer(){
+  clearInterval(st.timerInterval);
+  st.timeLeft=ROUND_TIME;
+  updateTimerDisplay();
+  st.timerInterval=setInterval(()=>{
+    st.timeLeft--;
+    updateTimerDisplay();
+    if(st.timeLeft<=0){ clearInterval(st.timerInterval); if(!st.animating) endRound(); }
+  },1000);
+}
+
+function updateTimerDisplay(){
+  const pct=Math.max(0,st.timeLeft/ROUND_TIME*100);
+  document.getElementById('timer-fill').style.width=pct+'%';
+  const n=document.getElementById('timer-num');
+  n.textContent=st.timeLeft+'s';
+  n.style.color=st.timeLeft<=15?'#c62828':st.timeLeft<=30?'#e65100':'#2e7d32';
+}
+
+// ─── End Round ──────────────────────────────────────────────────────────────
+function endRound(){
+  clearInterval(st.timerInterval);
+  st.totalScore+=st.roundScore;
+  const q=st.rounds[st.roundIdx];
+  st.history.push({q, score:st.roundScore, sorted:{...st.sorted}, failed:new Set(st.failed)});
+
+  if(st.roundIdx>=2){ setTimeout(showScorecard,600); return; }
+  showRoundBrief();
+}
+
+function showRoundBrief(){
+  const overlay=document.getElementById('round-overlay');
+  document.getElementById('ro-title').textContent=`Round ${st.roundIdx+1} complete!`;
+  document.getElementById('ro-score').innerHTML=`${st.roundScore}<span>/60</span>`;
+  const correct=st.roundScore/10;
+  document.getElementById('ro-sub').textContent=
+    correct===6?'Perfect round! 🎉':correct>=4?'Well done! 👏':'Keep practising!';
+  overlay.classList.add('visible');
+  setTimeout(()=>{
+    overlay.classList.remove('visible');
+    st.roundIdx++;
+    loadRound();
+  },2800);
+}
+
+// ─── Scorecard ──────────────────────────────────────────────────────────────
+function showScorecard(){
+  showScreen('s-score');
+  document.getElementById('sc-grade').textContent=`Grade ${st.grade}`;
+  document.getElementById('sc-total').innerHTML=`${st.totalScore}<span>/180</span>`;
+  const totalCorrect=st.history.reduce((a,h)=>a+h.score/10,0);
+  document.getElementById('sc-sub').textContent=
+    `${totalCorrect} first-attempt correct out of 18`;
+
+  const container=document.getElementById('sc-rounds');
+  container.innerHTML='';
+  st.history.forEach((h,i)=>{
+    const div=document.createElement('div');
+    div.className='sc-round';
+    const allWords=[...h.q.syn,...h.q.ant,...h.q.nei];
+    const chips=allWords.map(w=>{
+      const type=h.q.syn.includes(w)?'syn':h.q.ant.includes(w)?'ant':'nei';
+      const firstOk=!h.failed.has(w);
+      return `<span class="sc-chip ${type}">${firstOk?'✓':''} ${w}</span>`;
+    }).join('');
+
+    div.innerHTML=`
+      <div class="sc-round-title">Round ${i+1}</div>
+      <div class="sc-round-target">${h.q.target}</div>
+      <div class="sc-words">${chips}</div>
+      <div class="sc-round-score">${h.score} / 60 pts</div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+// ─── Toast ──────────────────────────────────────────────────────────────────
+let toastTimer=null;
+function showToast(msg,cls){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='feedback-toast '+cls+' show';
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),1400);
+}
+
+// ─── Nav ────────────────────────────────────────────────────────────────────
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function goGrade(){ clearInterval(st.timerInterval); showScreen('s-grade'); }
+function playAgain(){ startGame(st.grade); }
+
+// ─── Shuffle ────────────────────────────────────────────────────────────────
+function shuffle(arr){
+  for(let i=arr.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]]=[arr[j],arr[i]];
+  }
+  return arr;
+}
+</script>
+</body>
+</html>
