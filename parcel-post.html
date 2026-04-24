@@ -488,6 +488,7 @@ function showNextParcel(){
   clearFeedback();
   const p=document.getElementById('parcel');
   document.getElementById('parcel-word').textContent=st.queue[0].word;
+  p.style.opacity='';
   p.className='parcel entering';
   setTimeout(()=>{ if(p.classList.contains('entering')) p.className='parcel'; },340);
   st.animating=false;
