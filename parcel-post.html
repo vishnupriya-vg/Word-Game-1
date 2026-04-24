@@ -101,7 +101,7 @@
     .belt-surface{
       height:82px;background:linear-gradient(180deg,#8B6340,#7a5530);
       display:flex;align-items:center;justify-content:center;
-      position:relative;overflow:visible;
+      position:relative;overflow:hidden;
     }
     .belt-surface::before{content:'';position:absolute;inset:0;
       background:repeating-linear-gradient(90deg,transparent 0,transparent 60px,rgba(255,255,255,.04) 60px,rgba(255,255,255,.04) 61px);}
@@ -379,12 +379,15 @@ function getAudio(){
 function playCorrectSort(){
   try{
     const ctx=getAudio(),t=ctx.currentTime;
-    const osc=ctx.createOscillator(),g=ctx.createGain();
-    osc.connect(g);g.connect(ctx.destination);
-    osc.type='sine';osc.frequency.value=880;
-    g.gain.setValueAtTime(0.001,t);g.gain.linearRampToValueAtTime(.16,t+.01);
-    g.gain.exponentialRampToValueAtTime(0.001,t+.2);
-    osc.start(t);osc.stop(t+.2);
+    [[660,0],[880,.13],[1100,.24]].forEach(([f,d])=>{
+      const osc=ctx.createOscillator(),g=ctx.createGain();
+      osc.connect(g);g.connect(ctx.destination);
+      osc.type='sine';osc.frequency.value=f;
+      const s=t+d;
+      g.gain.setValueAtTime(0.001,s);g.gain.linearRampToValueAtTime(.3,s+.012);
+      g.gain.exponentialRampToValueAtTime(0.001,s+.32);
+      osc.start(s);osc.stop(s+.35);
+    });
   }catch(e){}
 }
 function playSeal(){
@@ -404,14 +407,14 @@ function playSeal(){
 function playUhOh(){
   try{
     const ctx=getAudio(),t=ctx.currentTime;
-    [380,260].forEach((f,i)=>{
+    [[320,0],[220,.2]].forEach(([f,d])=>{
       const osc=ctx.createOscillator(),g=ctx.createGain();
       osc.connect(g);g.connect(ctx.destination);
-      osc.type='sine';osc.frequency.value=f;
-      const s=t+i*.17;
-      g.gain.setValueAtTime(0.001,s);g.gain.linearRampToValueAtTime(.2,s+.02);
-      g.gain.exponentialRampToValueAtTime(0.001,s+.22);
-      osc.start(s);osc.stop(s+.25);
+      osc.type='triangle';osc.frequency.value=f;
+      const s=t+d;
+      g.gain.setValueAtTime(0.001,s);g.gain.linearRampToValueAtTime(.35,s+.015);
+      g.gain.exponentialRampToValueAtTime(0.001,s+.3);
+      osc.start(s);osc.stop(s+.32);
     });
   }catch(e){}
 }
